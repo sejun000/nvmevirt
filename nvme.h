@@ -328,6 +328,7 @@ struct nvme_reservation_status {
 	op(nvme_cmd_kv_iter_read, 0xB2) \
 	op(nvme_cmd_kv_exist, 0xB3) \
 	op(nvme_cmd_kv_batch, 0x85) \
+	op(nvme_cmd_gc, 0x88) \
 
 #define ENUM_NVME_OP(name, value) name = value,
 #define STRING_NVME_OP(name, value) [name] = #name,
@@ -360,8 +361,30 @@ struct nvme_rw_command {
 	__u8 flags;
 	__u16 command_id;
 	__le32 nsid;
-	__u64 rsvd2;
+	//__u64 rsvd2;
+	__u32 blkid[2];
 	__le64 metadata;
+	__le64 prp1;
+	__le64 prp2;
+	__le64 slba;
+	__le16 length;
+	__le16 control;
+	__le32 dsmgmt;
+	__le32 reftag;
+	__le16 apptag;
+	__le16 appmask;
+};
+
+struct nvme_gc_command {
+	__u8 opcode;
+	__u8 flags;
+	__u16 command_id;
+	__le32 nsid;
+	//__u64 rsvd2;
+	__u32 victim_blkid;
+	__u32 active_blkid[2];
+	__u32 rsvd2;
+	//__le64 metadata;
 	__le64 prp1;
 	__le64 prp2;
 	__le64 slba;
@@ -619,6 +642,7 @@ struct nvme_command {
 	union {
 		struct nvme_common_command common;
 		struct nvme_rw_command rw;
+		struct nvme_gc_command gc;
 		struct nvme_get_log_page_command get_log_page;
 		struct nvme_identify identify;
 		struct nvme_features features;

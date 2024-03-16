@@ -193,10 +193,6 @@ static void ssd_init_nand_blk(struct nand_block *blk, struct ssdparams *spp)
 	for (i = 0; i < blk->npgs; i++) {
 		ssd_init_nand_page(&blk->pg[i], spp);
 	}
-	blk->ipc = 0;
-	blk->vpc = 0;
-	blk->erase_cnt = 0;
-	blk->wp = 0;
 }
 
 static void ssd_remove_nand_blk(struct nand_block *blk)

@@ -24,6 +24,7 @@
 #define INVALID_PPA (~(0ULL))
 #define INVALID_LPN (~(0ULL))
 #define UNMAPPED_PPA (~(0ULL))
+#define UNMAPPED_HALF_PPA (~(0UL))
 
 enum {
 	NAND_READ = 0,
@@ -53,9 +54,9 @@ enum { CELL_TYPE_LSB, CELL_TYPE_MSB, CELL_TYPE_CSB, MAX_CELL_TYPES };
 #define TOTAL_PPA_BITS (64)
 #define BLK_BITS (16)
 #define PAGE_BITS (16)
-#define PL_BITS (8)
-#define LUN_BITS (8)
-#define CH_BITS (8)
+#define PL_BITS (4)
+#define LUN_BITS (4)
+#define CH_BITS (4)
 #define RSB_BITS (TOTAL_PPA_BITS - (BLK_BITS + PAGE_BITS + PL_BITS + LUN_BITS + CH_BITS))
 
 /* describe a physical page addr */
@@ -63,10 +64,10 @@ struct ppa {
 	union {
 		struct {
 			uint64_t pg : PAGE_BITS; // pg == 4KB
-			uint64_t blk : BLK_BITS;
 			uint64_t pl : PL_BITS;
 			uint64_t lun : LUN_BITS;
 			uint64_t ch : CH_BITS;
+			uint64_t blk : BLK_BITS;
 			uint64_t rsv : RSB_BITS;
 		} g;
 
@@ -77,6 +78,21 @@ struct ppa {
 		} h;
 
 		uint64_t ppa;
+	};
+};
+
+struct half_ppa {
+	union {
+		struct {
+			uint64_t pg : PAGE_BITS; // pg == 4KB
+			uint64_t pl : PL_BITS;
+			uint64_t lun : LUN_BITS;
+			uint64_t ch : CH_BITS;
+			//uint64_t blk : BLK_BITS;
+			uint64_t rsv : 4;
+		} g;
+
+		uint32_t half_ppa;
 	};
 };
 
@@ -91,10 +107,6 @@ struct nand_page {
 struct nand_block {
 	struct nand_page *pg;
 	int npgs;
-	int ipc; /* invalid page count */
-	int vpc; /* valid page count */
-	int erase_cnt;
-	int wp; /* current write pointer */
 };
 
 struct nand_plane {
