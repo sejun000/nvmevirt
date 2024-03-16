@@ -362,7 +362,8 @@ struct nvme_rw_command {
 	__u16 command_id;
 	__le32 nsid;
 	//__u64 rsvd2;
-	__u32 blkid[2];
+	__u32 blkid;
+	__u32 rsvd2;
 	__le64 metadata;
 	__le64 prp1;
 	__le64 prp2;
@@ -382,9 +383,8 @@ struct nvme_gc_command {
 	__le32 nsid;
 	//__u64 rsvd2;
 	__u32 victim_blkid;
-	__u32 active_blkid[2];
-	__u32 rsvd2;
-	//__le64 metadata;
+	__u32 active_blkid;
+	__le64 metadata;
 	__le64 prp1;
 	__le64 prp2;
 	__le64 slba;

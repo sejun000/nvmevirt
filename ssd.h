@@ -23,8 +23,9 @@
 
 #define INVALID_PPA (~(0ULL))
 #define INVALID_LPN (~(0ULL))
-#define UNMAPPED_PPA (~(0ULL))
-#define UNMAPPED_HALF_PPA (~(0UL))
+
+#define UNMAPPED_PPA (((1ULL) << (PAGE_BITS + PL_BITS + LUN_BITS + CH_BITS)) - 1)
+#define UNMAPPED_HALF_PPA (UNMAPPED_PPA)
 
 enum {
 	NAND_READ = 0,

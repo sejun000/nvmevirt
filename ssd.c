@@ -353,6 +353,11 @@ uint64_t ssd_advance_write_buffer(struct ssd *ssd, uint64_t request_time, uint64
 	return nsecs_latest;
 }
 
+static inline bool mapped_ppa(struct ppa *ppa)
+{
+	return ((ppa->ppa & UNMAPPED_PPA) != UNMAPPED_PPA);
+}
+
 uint64_t ssd_advance_nand(struct ssd *ssd, struct nand_cmd *ncmd)
 {
 	int c = ncmd->cmd;
@@ -369,7 +374,7 @@ uint64_t ssd_advance_nand(struct ssd *ssd, struct nand_cmd *ncmd)
 		"SSD: %p, Enter stime: %lld, ch %d lun %d blk %d page %d command %d ppa 0x%llx\n",
 		ssd, ncmd->stime, ppa->g.ch, ppa->g.lun, ppa->g.blk, ppa->g.pg, c, ppa->ppa);
 
-	if (ppa->ppa == UNMAPPED_PPA) {
+	if (!mapped_ppa(ppa)) {
 		NVMEV_ERROR("Error ppa 0x%llx\n", ppa->ppa);
 		return cmd_stime;
 	}
