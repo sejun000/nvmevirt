@@ -361,9 +361,9 @@ struct nvme_rw_command {
 	__u8 flags;
 	__u16 command_id;
 	__le32 nsid;
-	//__u64 rsvd2;
+	__u32 old_blkid;
 	__u32 blkid;
-	__u32 rsvd2;
+	//__u64 rsvd2;
 	__le64 metadata;
 	__le64 prp1;
 	__le64 prp2;

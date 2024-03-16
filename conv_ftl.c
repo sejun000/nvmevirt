@@ -418,7 +418,7 @@ static uint64_t gc_write_page(struct conv_ftl *conv_ftl, struct ppa *old_ppa, in
 	/* update rmap */
 	set_rmap_ent(conv_ftl, lpn, &new_ppa);
 
-//	mark_page_valid(conv_ftl, &new_ppa);
+	mark_page_valid(conv_ftl, &new_ppa);
 
 	/* need to advance the write pointer here */
 	advance_write_pointer(conv_ftl, active_blk_id);
@@ -677,6 +677,7 @@ static bool conv_write(struct nvmev_ns *ns, struct nvmev_request *req, struct nv
 
 	struct nvme_command *cmd = req->cmd;
 	uint64_t blk_id = cmd->rw.blkid;
+	uint64_t old_blk_id = cmd->rw.old_blkid;
 	uint64_t lba = cmd->rw.slba;
 	uint64_t nr_lba = (cmd->rw.length + 1);
 	uint64_t start_lpn = lba / spp->secs_per_pg;
@@ -728,11 +729,14 @@ static bool conv_write(struct nvmev_ns *ns, struct nvmev_request *req, struct nv
 		ppa.g.blk = blk_id;
 		NVMEV_ERROR("%s: get half ppa blkid : %lld  ppa : %lld", __FUNCTION__, blk_id, ppa.ppa);
 		if (mapped_ppa(&ppa)) {
-			NVMEV_DEBUG_VERBOSE("%s: mmaped ppa %lld", __FUNCTION__, ppa.ppa);
+			NVMEV_DEBUG_VERBOSE("%s: mmaped old_blk_id : %lld, ppa %lld", __FUNCTION__, old_blk_id, ppa.ppa);
 			/* update old page information first */
-			//mark_page_invalid(conv_ftl, &ppa);
-			set_rmap_ent(conv_ftl, INVALID_LPN, &ppa);
-			NVMEV_DEBUG("%s: %lld is invalid, ", __func__, ppa2pgidx(conv_ftl, &ppa));
+			struct ppa old_ppa;
+			old_ppa.ppa = ppa.ppa;
+			old_ppa.g.blk = old_blk_id;
+			mark_page_invalid(conv_ftl, &old_ppa);
+			set_rmap_ent(conv_ftl, INVALID_LPN, &old_ppa);
+			NVMEV_DEBUG("%s: %lld is invalid, ", __func__, ppa2pgidx(conv_ftl, &old_ppa));
 		}
 
 		/* new write */
@@ -743,7 +747,7 @@ static bool conv_write(struct nvmev_ns *ns, struct nvmev_request *req, struct nv
 		/* update rmap */
 		set_rmap_ent(conv_ftl, local_lpn, &ppa);
 
-	//	mark_page_valid(conv_ftl, &ppa);
+		mark_page_valid(conv_ftl, &ppa);
 
 		
 		/* need to advance the write pointer here */
