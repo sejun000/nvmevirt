@@ -8,6 +8,7 @@
 
 #include "nvmev.h"
 #include "dma.h"
+#include "ssd_config.h"
 
 #if (SUPPORTED_SSD_TYPE(CONV) || SUPPORTED_SSD_TYPE(ZNS))
 #include "ssd.h"
@@ -591,6 +592,9 @@ static int nvmev_io_worker(void *data)
 			}
 
 			if (w->is_copied == false) {
+
+#if (NO_VERIFY == 0)
+
 #ifdef PERF_DEBUG
 				w->nsecs_copy_start = local_clock() + delta;
 #endif
@@ -617,11 +621,13 @@ static int nvmev_io_worker(void *data)
 #ifdef PERF_DEBUG
 				w->nsecs_copy_done = local_clock() + delta;
 #endif
+#endif	
 				w->is_copied = true;
 				last_io_time = jiffies;
 
 				NVMEV_DEBUG_VERBOSE("%s: copied %u, %d %d %d\n", worker->thread_name, curr,
 					    w->sqid, w->cqid, w->sq_entry);
+		
 			}
 
 			if (w->nsecs_target <= curr_nsecs) {
@@ -687,8 +693,11 @@ static int nvmev_io_worker(void *data)
 			}
 		}
 		if (CONFIG_NVMEVIRT_IDLE_TIMEOUT != 0 &&
-		    time_after(jiffies, last_io_time + (CONFIG_NVMEVIRT_IDLE_TIMEOUT * HZ)))
+		    time_after(jiffies, last_io_time + (CONFIG_NVMEVIRT_IDLE_TIMEOUT * HZ))) {
+//#if (NO_VERIFY == 0)
 			schedule_timeout_interruptible(1);
+//#endif
+		}
 		else
 			cond_resched();
 	}
@@ -720,7 +729,7 @@ void NVMEV_IO_WORKER_INIT(struct nvmev_dev *nvmev_vdev)
 		worker->io_seq = -1;
 		worker->io_seq_end = -1;
 
-		snprintf(worker->thread_name, sizeof(worker->thread_name), "nvmev_io_worker_%d", worker_id);
+		snprintf(worker->thread_name, sizeof(worker->thread_name), "nvmev_io_worker_%d_%d", worker_id, SSD_INDEX);
 
 		worker->task_struct = kthread_create(nvmev_io_worker, worker, "%s", worker->thread_name);
 

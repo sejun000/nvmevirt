@@ -340,7 +340,7 @@ static struct pci_ops nvmev_pci_ops = {
 };
 
 static struct pci_sysdata nvmev_pci_sysdata = {
-	.domain = NVMEV_PCI_DOMAIN_NUM,
+	.domain = NVMEV_PCI_DOMAIN_NUM + SSD_INDEX,
 	.node = 0,
 };
 

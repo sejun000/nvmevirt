@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-
 #ifndef _NVMEVIRT_SSD_CONFIG_H
 #define _NVMEVIRT_SSD_CONFIG_H
+
+#define NO_VERIFY 1
 
 /* SSD Model */
 #define INTEL_OPTANE 0

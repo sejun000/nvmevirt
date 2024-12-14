@@ -16,6 +16,7 @@
 #include <asm/e820/api.h>
 #endif
 
+#include "ssd_config.h"
 #include "nvmev.h"
 #include "conv_ftl.h"
 #include "zns_ftl.h"
@@ -74,6 +75,8 @@ static char *cpus;
 static unsigned int debug = 0;
 
 int io_using_dma = false;
+
+#define NVMEV_NAME_SIZE (32)
 
 static int set_parse_mem_param(const char *val, const struct kernel_param *kp)
 {
@@ -190,7 +193,9 @@ static int nvmev_dispatcher(void *data)
 
 static void NVMEV_DISPATCHER_INIT(struct nvmev_dev *nvmev_vdev)
 {
-	nvmev_vdev->nvmev_dispatcher = kthread_create(nvmev_dispatcher, NULL, "nvmev_dispatcher");
+	char nvmev_dispatcher_name[NVMEV_NAME_SIZE];
+	snprintf(nvmev_dispatcher_name, NVMEV_NAME_SIZE, "nvmev_dispatcher_%d", SSD_INDEX);
+	nvmev_vdev->nvmev_dispatcher = kthread_create(nvmev_dispatcher, NULL, nvmev_dispatcher_name);
 	if (nvmev_vdev->config.cpu_nr_dispatcher != -1)
 		kthread_bind(nvmev_vdev->nvmev_dispatcher, nvmev_vdev->config.cpu_nr_dispatcher);
 	wake_up_process(nvmev_vdev->nvmev_dispatcher);
@@ -426,6 +431,7 @@ static const struct file_operations proc_file_fops = {
 
 static void NVMEV_STORAGE_INIT(struct nvmev_dev *nvmev_vdev)
 {
+	char nvmev_name[NVMEV_NAME_SIZE];
 	NVMEV_INFO("Storage: %#010lx-%#010lx (%lu MiB)\n",
 			nvmev_vdev->config.storage_start,
 			nvmev_vdev->config.storage_start + nvmev_vdev->config.storage_size,
@@ -433,14 +439,18 @@ static void NVMEV_STORAGE_INIT(struct nvmev_dev *nvmev_vdev)
 
 	nvmev_vdev->io_unit_stat = kzalloc(
 		sizeof(*nvmev_vdev->io_unit_stat) * nvmev_vdev->config.nr_io_units, GFP_KERNEL);
-
+#if (NO_VERIFY == 1)
+	nvmev_vdev->storage_mapped = NULL;
+#else
 	nvmev_vdev->storage_mapped = memremap(nvmev_vdev->config.storage_start,
 					      nvmev_vdev->config.storage_size, MEMREMAP_WB);
-
 	if (nvmev_vdev->storage_mapped == NULL)
 		NVMEV_ERROR("Failed to map storage memory.\n");
 
-	nvmev_vdev->proc_root = proc_mkdir("nvmev", NULL);
+#endif
+    // instance_id를 사용하여 고유한 이름 생성
+    snprintf(nvmev_name, NVMEV_NAME_SIZE, "nvmev%d", SSD_INDEX);
+	nvmev_vdev->proc_root = proc_mkdir(nvmev_name, NULL);
 	nvmev_vdev->proc_read_times =
 		proc_create("read_times", 0664, nvmev_vdev->proc_root, &proc_file_fops);
 	nvmev_vdev->proc_write_times =
@@ -453,13 +463,15 @@ static void NVMEV_STORAGE_INIT(struct nvmev_dev *nvmev_vdev)
 
 static void NVMEV_STORAGE_FINAL(struct nvmev_dev *nvmev_vdev)
 {
+	char nvmev_name[NVMEV_NAME_SIZE];
 	remove_proc_entry("read_times", nvmev_vdev->proc_root);
 	remove_proc_entry("write_times", nvmev_vdev->proc_root);
 	remove_proc_entry("io_units", nvmev_vdev->proc_root);
 	remove_proc_entry("stat", nvmev_vdev->proc_root);
 	remove_proc_entry("debug", nvmev_vdev->proc_root);
 
-	remove_proc_entry("nvmev", NULL);
+	snprintf(nvmev_name, NVMEV_NAME_SIZE, "nvmev%d", SSD_INDEX);
+	remove_proc_entry(nvmev_name, NULL);
 
 	if (nvmev_vdev->storage_mapped)
 		memunmap(nvmev_vdev->storage_mapped);
@@ -486,7 +498,7 @@ static bool __load_configs(struct nvmev_config *config)
 	config->memmap_size = memmap_size;
 	// storage space starts from 1M offset
 	config->storage_start = memmap_start + MB(1);
-	config->storage_size = memmap_size - MB(1);
+	config->storage_size = 1000000000000ULL; // memmap_size - MB(1);
 
 	config->read_time = read_time;
 	config->read_delay = read_delay;
