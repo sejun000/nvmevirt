@@ -91,13 +91,18 @@ static unsigned int __do_perform_io(int sqid, int sq_entry)
 			if (io_size + mem_offs > PAGE_SIZE)
 				io_size = PAGE_SIZE - mem_offs;
 		}
-
+#if (NO_VERIFY == 1)
+		if (offset < VERIFIED_SIZE) {
+#endif
 		if (cmd->opcode == nvme_cmd_write ||
 		    cmd->opcode == nvme_cmd_zone_append) {
 			memcpy(nvmev_vdev->ns[nsid].mapped + offset, vaddr + mem_offs, io_size);
 		} else if (cmd->opcode == nvme_cmd_read) {
 			memcpy(vaddr + mem_offs, nvmev_vdev->ns[nsid].mapped + offset, io_size);
 		}
+#if (NO_VERIFY == 1)
+		}
+#endif
 
 		kunmap_atomic(vaddr);
 
@@ -592,16 +597,15 @@ static int nvmev_io_worker(void *data)
 			}
 
 			if (w->is_copied == false) {
-
-#if (NO_VERIFY == 0)
-
 #ifdef PERF_DEBUG
 				w->nsecs_copy_start = local_clock() + delta;
 #endif
 				if (w->is_internal) {
 					;
+#if (NO_VERIFY == 0)
 				} else if (io_using_dma) {
 					__do_perform_io_using_dma(w->sqid, w->sq_entry);
+#endif
 				} else {
 #if (BASE_SSD == KV_PROTOTYPE)
 					struct nvmev_submission_queue *sq =
@@ -620,7 +624,6 @@ static int nvmev_io_worker(void *data)
 
 #ifdef PERF_DEBUG
 				w->nsecs_copy_done = local_clock() + delta;
-#endif
 #endif	
 				w->is_copied = true;
 				last_io_time = jiffies;
@@ -694,9 +697,7 @@ static int nvmev_io_worker(void *data)
 		}
 		if (CONFIG_NVMEVIRT_IDLE_TIMEOUT != 0 &&
 		    time_after(jiffies, last_io_time + (CONFIG_NVMEVIRT_IDLE_TIMEOUT * HZ))) {
-//#if (NO_VERIFY == 0)
 			schedule_timeout_interruptible(1);
-//#endif
 		}
 		else
 			cond_resched();

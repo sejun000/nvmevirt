@@ -440,7 +440,10 @@ static void NVMEV_STORAGE_INIT(struct nvmev_dev *nvmev_vdev)
 	nvmev_vdev->io_unit_stat = kzalloc(
 		sizeof(*nvmev_vdev->io_unit_stat) * nvmev_vdev->config.nr_io_units, GFP_KERNEL);
 #if (NO_VERIFY == 1)
-	nvmev_vdev->storage_mapped = NULL;
+		nvmev_vdev->storage_mapped = memremap(nvmev_vdev->config.storage_start,
+					      VERIFIED_SIZE, MEMREMAP_WB);
+		if (nvmev_vdev->storage_mapped == NULL)
+			NVMEV_ERROR("Failed to map storage memory.\n");
 #else
 	nvmev_vdev->storage_mapped = memremap(nvmev_vdev->config.storage_start,
 					      nvmev_vdev->config.storage_size, MEMREMAP_WB);
