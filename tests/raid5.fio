@@ -1,10 +1,10 @@
 [global]
 name=randrw_test
 rw=write
-rwmixread=70
-bs=8k
-offset=150G
-size=2G
+#rwmixread=70
+bs=128k
+offset=0G
+size=24G
 numjobs=8
 time_based=1
 runtime=120
@@ -14,4 +14,5 @@ iodepth=16
 ioengine=libaio
 
 [mapper_job]
-filename=/dev/md0
+#filename=/dev/md0
+filename=/dev/vg_raid/lv_raid5

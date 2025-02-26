@@ -597,10 +597,17 @@ static void __nvmev_proc_admin_req(int entry_id)
 
 void nvmev_proc_admin_sq(int new_db, int old_db)
 {
-	struct nvmev_admin_queue *queue = nvmev_vdev->admin_q;
+	struct nvmev_admin_queue *queue = NULL;
 	int num_proc = new_db - old_db;
 	int curr = old_db;
 	int seq;
+	if (unlikely(nvmev_vdev == NULL)) {
+		return;
+	}
+	queue = nvmev_vdev->admin_q;
+	if (unlikely(queue == NULL)) {
+		return;
+	}
 
 	if (num_proc < 0)
 		num_proc += queue->sq_depth;

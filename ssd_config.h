@@ -2,8 +2,10 @@
 #ifndef _NVMEVIRT_SSD_CONFIG_H
 #define _NVMEVIRT_SSD_CONFIG_H
 
+#include "nvmev.h"
+
 #define NO_VERIFY 1
-#define VERIFIED_SIZE (512 * 1024 * 1024ULL)
+#define VERIFIED_SIZE (8 * 1024ULL * 1024 * 1024ULL)
 
 /* SSD Model */
 #define INTEL_OPTANE 0

@@ -921,6 +921,7 @@ static bool conv_read(struct nvmev_ns *ns, struct nvmev_request *req, struct nvm
 	return true;
 }
 
+extern uint64_t write_count;
 static bool conv_write(struct nvmev_ns *ns, struct nvmev_request *req, struct nvmev_result *ret)
 {
 	struct conv_ftl *conv_ftls = (struct conv_ftl *)ns->ftls;
@@ -956,7 +957,6 @@ static bool conv_write(struct nvmev_ns *ns, struct nvmev_request *req, struct nv
 				__func__, start_lpn, spp->tt_pgs);
 		return false;
 	}
-
 	allocated_buf_size = buffer_allocate(wbuf, LBA_TO_BYTE(nr_lba));
 	if (allocated_buf_size < LBA_TO_BYTE(nr_lba))
 		return false;
@@ -972,6 +972,8 @@ static bool conv_write(struct nvmev_ns *ns, struct nvmev_request *req, struct nv
 		uint64_t nsecs_completed = 0;
 		struct ppa ppa;
 
+		write_count++;
+		// NVMEV_ERROR("%s: write_count %ld\n", __func__, write_count);
 		conv_ftl = &conv_ftls[lpn % nr_parts];
 		local_lpn = lpn / nr_parts;
 		ppa = get_maptbl_ent(

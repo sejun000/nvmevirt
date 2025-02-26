@@ -23,6 +23,7 @@
 #include "simple_ftl.h"
 #include "kv_ftl.h"
 #include "dma.h"
+#include "pci.h"
 
 /****************************************************************
  * Memory Layout
@@ -122,7 +123,10 @@ static bool nvmev_proc_dbs(void)
 	int new_db;
 	int old_db;
 	bool updated = false;
-
+	volatile struct nvme_ctrl_regs *bar = nvmev_vdev->bar;
+	if (unlikely(bar->csts.rdy == 0)) {
+		return false;
+	}
 	// Admin queue
 	new_db = nvmev_vdev->dbs[0];
 	if (new_db != nvmev_vdev->old_dbs[0]) {
@@ -411,6 +415,48 @@ static int __proc_file_open(struct inode *inode, struct file *file)
 	return single_open(file, __proc_file_read, (char *)file->f_path.dentry->d_name.name);
 }
 
+
+volatile uint64_t write_count;
+volatile uint64_t nand_write_count;
+
+static int nand_write_count_show(struct seq_file *m, void *v)
+{
+	seq_printf(m, "%llu\n", nand_write_count);
+
+	return 0;
+}
+
+static int nand_write_count_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, nand_write_count_show, (void *)file->f_path.dentry->d_name.name);
+}
+
+static const struct proc_ops nand_write_count_fops = {
+	.proc_open    = nand_write_count_open,
+	.proc_read    = seq_read,
+	.proc_lseek   = seq_lseek,
+	.proc_release = single_release,
+};
+
+static int write_count_show(struct seq_file *m, void *v)
+{
+	seq_printf(m, "%llu\n", write_count);
+
+	return 0;
+}
+
+static int write_count_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, write_count_show, (void *)file->f_path.dentry->d_name.name);
+}
+
+static const struct proc_ops write_count_fops = {
+	.proc_open    = write_count_open,
+	.proc_read    = seq_read,
+	.proc_lseek   = seq_lseek,
+	.proc_release = single_release,
+};
+
 #if LINUX_VERSION_CODE > KERNEL_VERSION(5, 0, 0)
 static const struct proc_ops proc_file_fops = {
 	.proc_open = __proc_file_open,
@@ -441,7 +487,7 @@ static void NVMEV_STORAGE_INIT(struct nvmev_dev *nvmev_vdev)
 		sizeof(*nvmev_vdev->io_unit_stat) * nvmev_vdev->config.nr_io_units, GFP_KERNEL);
 #if (NO_VERIFY == 1)
 		nvmev_vdev->storage_mapped = memremap(nvmev_vdev->config.storage_start,
-					      VERIFIED_SIZE, MEMREMAP_WB);
+					VERIFIED_SIZE, MEMREMAP_WB);
 		if (nvmev_vdev->storage_mapped == NULL)
 			NVMEV_ERROR("Failed to map storage memory.\n");
 #else
@@ -462,6 +508,8 @@ static void NVMEV_STORAGE_INIT(struct nvmev_dev *nvmev_vdev)
 		proc_create("io_units", 0664, nvmev_vdev->proc_root, &proc_file_fops);
 	nvmev_vdev->proc_stat = proc_create("stat", 0444, nvmev_vdev->proc_root, &proc_file_fops);
 	nvmev_vdev->proc_debug = proc_create("debug", 0444, nvmev_vdev->proc_root, &proc_file_fops);
+	proc_create("write_count", 0444, nvmev_vdev->proc_root, &write_count_fops);
+ 	proc_create("nand_write_count", 0444, nvmev_vdev->proc_root, &nand_write_count_fops);
 }
 
 static void NVMEV_STORAGE_FINAL(struct nvmev_dev *nvmev_vdev)
@@ -481,6 +529,8 @@ static void NVMEV_STORAGE_FINAL(struct nvmev_dev *nvmev_vdev)
 
 	if (nvmev_vdev->io_unit_stat)
 		kfree(nvmev_vdev->io_unit_stat);
+	remove_proc_entry("nvmev/ftls/write_count", NULL);
+	remove_proc_entry("nvmev/ftls/nand_write_count", NULL);
 }
 
 static bool __load_configs(struct nvmev_config *config)
@@ -501,7 +551,7 @@ static bool __load_configs(struct nvmev_config *config)
 	config->memmap_size = memmap_size;
 	// storage space starts from 1M offset
 	config->storage_start = memmap_start + MB(1);
-	config->storage_size = 1000000000000ULL; // memmap_size - MB(1);
+	config->storage_size = 549755813888ULL; //1000000000000ULL;// memmap_size - MB(1); //1000000000000ULL; // memmap_size - MB(1);
 
 	config->read_time = read_time;
 	config->read_delay = read_delay;

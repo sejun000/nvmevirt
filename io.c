@@ -200,14 +200,18 @@ static unsigned int __do_perform_io_using_dma(int sqid, int sq_entry)
 		}
 
 		io_size = min_t(size_t, remaining, page_size);
-
+#if (NO_VERIFY == 1)
+		if (offset < VERIFIED_SIZE) {
+#endif
 		if (cmd->opcode == nvme_cmd_write ||
 		    cmd->opcode == nvme_cmd_zone_append) {
 			ioat_dma_submit(paddr, nvmev_vdev->config.storage_start + offset, io_size);
 		} else if (cmd->opcode == nvme_cmd_read) {
 			ioat_dma_submit(nvmev_vdev->config.storage_start + offset, paddr, io_size);
 		}
-
+#if (NO_VERIFY == 1)
+		}
+#endif
 		remaining -= io_size;
 		offset += io_size;
 	}
@@ -602,10 +606,8 @@ static int nvmev_io_worker(void *data)
 #endif
 				if (w->is_internal) {
 					;
-#if (NO_VERIFY == 0)
 				} else if (io_using_dma) {
 					__do_perform_io_using_dma(w->sqid, w->sq_entry);
-#endif
 				} else {
 #if (BASE_SSD == KV_PROTOTYPE)
 					struct nvmev_submission_queue *sq =

@@ -239,6 +239,11 @@ bool nvmev_proc_bars(void)
 			}
 		} else if (bar->cc.en == 0) {
 			bar->csts.rdy = 0;
+			if (nvmev_vdev->admin_q) {
+				nvmev_vdev->dbs[0] = nvmev_vdev->old_dbs[0] = 0;
+				nvmev_vdev->dbs[1] = nvmev_vdev->old_dbs[1] = 0;
+				nvmev_vdev->admin_q->cq_head = 0;
+			}
 		}
 
 		/* Shutdown */
@@ -391,6 +396,7 @@ static struct pci_bus *__create_pci_bus(void)
 	struct pci_dev *dev;
 
 	nvmev_pci_sysdata.node = cpu_to_node(nvmev_vdev->config.cpu_nr_dispatcher);
+	//nvmev_pci_sysdata.node = 1;
 
 	bus = pci_scan_bus(NVMEV_PCI_BUS_NUM, &nvmev_pci_ops, &nvmev_pci_sysdata);
 
